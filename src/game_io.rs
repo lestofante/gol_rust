@@ -3,7 +3,6 @@ extern crate termion;
 use crate::Game;
 
 use termion::cursor;
-use termion::event::Key;
 
 use std::io::Write;
 
@@ -24,18 +23,16 @@ const BOTTOM_RIGHT_CORNER: &'static str = "┘";
 const CELL_ALIVE: &'static str = "█";
 const CELL_DEAD: &'static str = "░";
 
-pub struct GameIO<R, W: Write> {
+pub struct GameIO<W: Write> {
   /// Standard output.
   pub stdout: W,
-  /// Standard input.
-  pub stdin: R,
 
   /// The cursor coordinate.
   pub x: u16,
   pub y: u16,
 }
 
-impl<R: Iterator<Item = Result<Key, std::io::Error>>, W: Write> GameIO<R, W> {
+impl<W: Write> GameIO<W> {
   pub fn print_border(&mut self, game: &Game) {
     // Reset the cursor.
     write!(self.stdout, "{}", cursor::Goto(1, 1)).unwrap();

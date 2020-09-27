@@ -103,8 +103,9 @@ impl Game {
 
   fn wrap_coord(&self, t: (i32, i32)) -> usize {
     let w = self.width as i32;
+    let h = self.height as i32;
     let x = ((t.0 % w) + w) % w;
-    let y = ((t.1 % w) + w) % w;
+    let y = ((t.1 % h) + h) % h;
 
     (y * w + x) as usize
   }

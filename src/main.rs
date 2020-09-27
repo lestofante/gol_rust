@@ -4,7 +4,6 @@
 
 extern crate termion;
 
-//use termion::input::TermRead;
 use termion::raw::IntoRawMode;
 use termion::{clear, cursor};
 
@@ -52,14 +51,13 @@ author:
 "#;
 
 /// Initialize the game.
-fn init<W: Write, R: Read>(mut stdout: W, stdin: R, w: u16, h: u16) {
+fn init<W: Write>(mut stdout: W, w: u16, h: u16) {
   write!(stdout, "{}", clear::All).unwrap();
 
   // Set the initial game state.
   let mut game = Game::new(w, h);
 
   let mut game_io = GameIO {
-    stdin: stdin.keys(),
     stdout: stdout,
     x: 0,
     y: 0,
@@ -74,7 +72,7 @@ fn init<W: Write, R: Read>(mut stdout: W, stdin: R, w: u16, h: u16) {
 
   let mut aync_stdin = termion::async_stdin().bytes();
 
-  let ten_millis = std::time::Duration::from_millis(10);
+  let default_sleep = std::time::Duration::from_millis(10);
   // Start the event loop.
   loop {
     game_io.print_map(&game);
@@ -86,48 +84,45 @@ fn init<W: Write, R: Read>(mut stdout: W, stdin: R, w: u16, h: u16) {
       cursor::Goto(game_io.x + 2, game_io.y + 2)
     )
     .unwrap();
+    
     game_io.stdout.flush().unwrap();
 
+    let b = aync_stdin.next();
 
-    use termion::event::Key::*;
-    let b;
-    if autorun{
-        let a = aync_stdin.next();
-        termion::event::Key::From(a);
-    }else{
-        b = game_io.stdin.read();
-    }
-    
-    if let Some(b) = b{
-        let b = b.unwrap();
-        match b {
-        Char('h') | Char('a') | Left => game_io.x = game.left(game_io.x),
-        Char('j') | Char('s') | Down => game_io.y = game.down(game_io.y),
-        Char('k') | Char('w') | Up => game_io.y = game.up(game_io.y),
-        Char('l') | Char('d') | Right => game_io.x = game.right(game_io.x),
-        Char(' ') => {
-            // Check if it was a mine.
-            let (x, y) = (game_io.x, game_io.y);
-            game.toggle(x, y);
-        }
-        Char('r') => {
-            game.reset();
-        }
-        Char('n') => {
-            game.step();
-        }
-        Char('p') => {
-            autorun = !autorun;
-        }
-        Char('q') => return,
-        _ => {}
-        }
-    }
+    match b {
+      Some(c) => match c {
+        Ok(d) => 
+            match d as char{
+            'h' | 'a' => game_io.x = game.left(game_io.x),
+            'j' | 's' => game_io.y = game.down(game_io.y),
+            'k' | 'w' => game_io.y = game.up(game_io.y),
+            'l' | 'd' => game_io.x = game.right(game_io.x),
+            ' ' => {
+                // Check if it was a mine.
+                let (x, y) = (game_io.x, game_io.y);
+                game.toggle(x, y);
+            }
+            'r' => {
+                game.reset();
+            }
+            'n' => {
+                game.step();
+            }
+            'p' => {
+                autorun = !autorun;
+            }
+            'q' => return,
+            _ => {},
+            },
+        Err(_) => {},
+      },
+      None => {}
+    };
 
     if autorun {
         game.step();
-        std::thread::sleep(ten_millis);
     }
+    std::thread::sleep(default_sleep);
   }
 }
 
@@ -139,8 +134,6 @@ fn main() {
   // Get and lock the stdios.
   let stdout = io::stdout();
   let mut stdout = stdout.lock();
-  let stdin = io::stdin();
-  let stdin = stdin.lock();
   let stderr = io::stderr();
   let mut stderr = stderr.lock();
 
@@ -218,12 +211,13 @@ fn main() {
   // We go to raw mode to make the control over the terminal more fine-grained.
   let stdout = stdout.into_raw_mode().unwrap();
 
-  // let termsize = termion::terminal_size().ok();
-  // let termwidth = termsize.map(|(w, _)| w - 2);
-  // let termheight = termsize.map(|(_, h)| h - 2);
+  let termsize = termion::terminal_size().ok();
+  let termwidth = termsize.map(|(w, _)| w - 2);
+  let termheight = termsize.map(|(_, h)| h - 2);
 
   // Initialize the game!
-  init(stdout, stdin, 10, 10);
+  init(stdout, termwidth.unwrap_or(10), termheight.unwrap_or(10));
+  //init(stdout, 11, 10);
 
   //write!(stderr, "out was {} {}.\n", termwidth.unwrap_or(0), termheight.unwrap_or(0));
 }

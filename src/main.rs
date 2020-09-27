@@ -4,7 +4,7 @@
 
 extern crate termion;
 
-use termion::input::TermRead;
+//use termion::input::TermRead;
 use termion::raw::IntoRawMode;
 use termion::{clear, cursor};
 
@@ -70,6 +70,11 @@ fn init<W: Write, R: Read>(mut stdout: W, stdin: R, w: u16, h: u16) {
 
   game_io.print_border(&game);
 
+  let mut autorun = false;
+
+  let mut aync_stdin = termion::async_stdin().bytes();
+
+  let ten_millis = std::time::Duration::from_millis(10);
   // Start the event loop.
   loop {
     game_io.print_map(&game);
@@ -83,27 +88,45 @@ fn init<W: Write, R: Read>(mut stdout: W, stdin: R, w: u16, h: u16) {
     .unwrap();
     game_io.stdout.flush().unwrap();
 
-    // Read a single byte from stdin.
-    let b = game_io.stdin.next().unwrap().unwrap();
+
     use termion::event::Key::*;
-    match b {
-      Char('h') | Char('a') | Left => game_io.x = game.left(game_io.x),
-      Char('j') | Char('s') | Down => game_io.y = game.down(game_io.y),
-      Char('k') | Char('w') | Up => game_io.y = game.up(game_io.y),
-      Char('l') | Char('d') | Right => game_io.x = game.right(game_io.x),
-      Char(' ') => {
-        // Check if it was a mine.
-        let (x, y) = (game_io.x, game_io.y);
-        game.toggle(x, y);
-      }
-      Char('r') => {
-        game.reset();
-      }
-      Char('n') => {
+    let b;
+    if autorun{
+        let a = aync_stdin.next();
+        termion::event::Key::From(a);
+    }else{
+        b = game_io.stdin.read();
+    }
+    
+    if let Some(b) = b{
+        let b = b.unwrap();
+        match b {
+        Char('h') | Char('a') | Left => game_io.x = game.left(game_io.x),
+        Char('j') | Char('s') | Down => game_io.y = game.down(game_io.y),
+        Char('k') | Char('w') | Up => game_io.y = game.up(game_io.y),
+        Char('l') | Char('d') | Right => game_io.x = game.right(game_io.x),
+        Char(' ') => {
+            // Check if it was a mine.
+            let (x, y) = (game_io.x, game_io.y);
+            game.toggle(x, y);
+        }
+        Char('r') => {
+            game.reset();
+        }
+        Char('n') => {
+            game.step();
+        }
+        Char('p') => {
+            autorun = !autorun;
+        }
+        Char('q') => return,
+        _ => {}
+        }
+    }
+
+    if autorun {
         game.step();
-      }
-      Char('q') => return,
-      _ => {}
+        std::thread::sleep(ten_millis);
     }
   }
 }

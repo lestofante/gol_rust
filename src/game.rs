@@ -105,6 +105,7 @@ impl Game {
     let w = self.width as i32;
     let x = ((t.0 % w) + w) % w;
     let y = ((t.1 % w) + w) % w;
+
     (y * w + x) as usize
   }
 
@@ -113,7 +114,6 @@ impl Game {
       vec![Cell { alive: false }; self.width as usize * self.height as usize].into_boxed_slice();
 
     for i in 0..self.grid.len() {
-      let is_alive = self.grid[i].alive;
       let w = self.width as i32;
       let is = i as i32;
       let x: i32 = is % w;
@@ -128,8 +128,6 @@ impl Game {
         (x - 1, y + 1),
         (x - 1, y),
         (x - 1, y - 1),
-        (x - 1, y),
-        (x - 1, y + 1),
       ]
       .into_iter()
       .map(|x| self.wrap_coord(x))
@@ -144,11 +142,13 @@ impl Game {
 
       new_grid[i].alive = self.grid[i].alive;
 
-      if alive_neighbors_count > 2 {
+      if alive_neighbors_count == 3 {
         new_grid[i].alive = true;
       }
-
-      if is_alive && alive_neighbors_count < 2 {
+      if alive_neighbors_count < 2 {
+        new_grid[i].alive = false;
+      }
+      if alive_neighbors_count > 3 {
         new_grid[i].alive = false;
       }
     }
